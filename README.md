@@ -1,6 +1,6 @@
 # Tempura
 
-A though exercise to try to implement [Temporal](https://temporal.io)'s concepts from scratch.
+A thought exercise to try to implement [Temporal](https://temporal.io)'s concepts from scratch.
 
 **Nota bene**: This is a weekend experiment and is in _no way, shape, or form_ something you should actually use and it doesn't come in clause to Temporal's feature set.
 
