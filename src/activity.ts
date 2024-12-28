@@ -6,11 +6,6 @@ export type CreateActivityOptions = {
   name?: string;
 };
 
-export type ActivityFunction<
-  P extends Serializable[],
-  R extends Serializable,
-> = (...parameters: P) => R;
-
 export class Activity<
   P extends Serializable[],
   R extends Serializable,
