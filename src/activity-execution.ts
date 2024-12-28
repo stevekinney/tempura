@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 
 import { Entity } from './entity';
-import { hash } from './utilities';
+import { createHash } from './utilities';
 
 import type { Activity } from './activity';
 
@@ -35,7 +35,7 @@ export class ActivityExecution<
   }
 
   get hash(): string {
-    return hash(...this.parameters);
+    return createHash(...this.parameters);
   }
 
   get result(): R | undefined {

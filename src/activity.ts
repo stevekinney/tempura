@@ -1,5 +1,5 @@
 import { ActivityExecution } from './activity-execution';
-import { hash } from './utilities';
+import { createHash } from './utilities';
 import { Entity } from './entity';
 
 export type CreateActivityOptions = {
@@ -38,7 +38,7 @@ export class Activity<
     public readonly name: string = fn.name || 'Anonymous',
   ) {
     super();
-    this.hash = hash(this.index, this.name, fn.toString());
+    this.hash = createHash(this.index, this.name, fn.toString());
     this.id = `${workflowId}/activities/${this.encodedHash}`;
   }
 

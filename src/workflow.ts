@@ -1,5 +1,5 @@
 import { Activity, type CreateActivityOptions } from './activity';
-import { generateId, hash } from './utilities';
+import { generateId, createHash } from './utilities';
 import { Entity } from './entity';
 import { kebabCase } from 'change-case';
 
@@ -72,7 +72,12 @@ export class WorkflowExecution<
   ) {
     super();
 
-    this.hash = hash(name, this.runId, workflow.toString(), ...parameters);
+    this.hash = createHash(
+      name,
+      this.runId,
+      workflow.toString(),
+      ...parameters,
+    );
 
     const data = this.load();
 

@@ -5,6 +5,6 @@ export function generateId(): string {
   return uuid();
 }
 
-export function hash(...data: unknown[]): string {
+export function createHash(...data: unknown[]): string {
   return crypto.createHash('sha1').update(data.join('-')).digest('base64');
 }
