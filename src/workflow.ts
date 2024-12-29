@@ -54,43 +54,50 @@ export class WorkflowExecution<
 > extends Entity<
   'name' | 'runId' | 'parameters' | 'result' | 'status' | 'eventCount'
 > {
-  readonly hash: string;
   result?: R;
 
-  static create<P extends Serializable[], R extends Serializable>({
+  static async create<P extends Serializable[], R extends Serializable>({
     name,
     workflow,
     parameters,
     runId = generateId(),
   }: WorkflowExecutionOptions<P, R>) {
-    return new WorkflowExecution<P, R>(
-      kebabCase(name) as WorkflowName,
+    const id: WorkflowId = `${name}/${runId}`;
+    const hash = createHash(name, runId, workflow.toString(), ...parameters);
+    name = kebabCase(name) as WorkflowName;
+
+    await database.put(id, {
+      name,
       workflow,
       parameters,
       runId,
-    ).save();
+      hash,
+    });
+
+    return new WorkflowExecution<P, R>(
+      id,
+      name,
+      workflow,
+      parameters,
+      runId,
+      hash,
+    );
   }
 
   private constructor(
+    public readonly id: WorkflowId,
     public readonly name: WorkflowExecutionOptions<P, R>['name'],
     private readonly workflow: WorkflowExecutionOptions<P, R>['workflow'],
     public readonly parameters: WorkflowExecutionOptions<P, R>['parameters'],
     public readonly runId: string,
+    public readonly hash: string,
   ) {
     super();
 
-    this.hash = createHash(name, this.runId, this.code, ...parameters);
-    const data = this.load();
-    /**
-     * Restore the state of the workflow execution.
-     */
-    if (data) {
-      this.result = data.result;
-    }
-  }
-
-  get id(): WorkflowId {
-    return `${this.name}/${this.runId}`;
+    this.save().then(() => {
+      const data = this.load();
+      if (data) this.result = data.result;
+    });
   }
 
   get code(): string {
@@ -112,7 +119,8 @@ export class WorkflowExecution<
   }
 
   get<K extends keyof WorkflowMetadata>(key: K): WorkflowMetadata[K] {
-    return database.get(`${this.id}`)[key];
+    const workflow = database.get(this.id) || {};
+    return workflow[key];
   }
 
   private set<K extends keyof WorkflowMetadata>(
