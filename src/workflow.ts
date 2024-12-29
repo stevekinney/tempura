@@ -1,7 +1,8 @@
+import { kebabCase } from 'change-case';
+
 import { Activity, type CreateActivityOptions } from './activity';
 import { generateId, createHash } from './utilities';
 import { Entity } from './entity';
-import { kebabCase } from 'change-case';
 import { database } from './database';
 import {
   recordWorkflowChange,
