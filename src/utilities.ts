@@ -1,4 +1,4 @@
-import crypto from 'node:crypto';
+import crypto from 'crypto';
 import { v4 as uuid } from 'uuid';
 
 export function generateId(): string {

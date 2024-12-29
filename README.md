@@ -7,13 +7,13 @@ A thought exercise to try to implement [Temporal](https://temporal.io)'s concept
 ## Install the Dependencies
 
 ```bash
-bun install
+npm install
 ```
 
 ## Run the Example
 
 ```bash
-bun run src/index.ts
+npm start
 ```
 
 1. Run it the first time and you should see that all of the activities execute for the first time.

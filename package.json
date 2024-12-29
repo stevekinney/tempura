@@ -2,8 +2,8 @@
   "name": "tempura",
   "module": "src/index.ts",
   "type": "module",
-  "devDependencies": {
-    "@types/bun": "latest"
+  "scripts": {
+    "start": "tsx src/index.ts"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
@@ -14,5 +14,9 @@
     "lmdb": "^3.2.0",
     "msgpackr": "^1.11.2",
     "uuid": "^11.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2"
   }
 }

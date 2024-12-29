@@ -5,12 +5,22 @@ import { createHash } from './utilities';
 
 import type { Activity } from './activity';
 
+/**
+ * Models an individual activity execution.
+ */
 export class ActivityExecution<
   P extends Serializable[],
   R extends Serializable,
-> extends Entity<'activity' | 'parameters' | 'result'> {
+> extends Entity<'activityId' | 'parameters' | 'result'> {
   #result: R | undefined;
 
+  /**
+   * Create and execute a new activity execution.
+   * @param activity The activity to execute.
+   * @param fn The function to execute.
+   * @param index Which execution of the activity is this?
+   * @param parameters The parameters to pass to the function.
+   */
   static async execute<P extends Serializable[], R extends Serializable>(
     activity: Activity<P, R>,
     fn: ActivityFunction<P, R>,
@@ -46,9 +56,16 @@ export class ActivityExecution<
     this.#result = result;
   }
 
+  /**
+   * Serializeable data about the activity execution.
+   */
   get metadata() {
-    const { id, hash, activity, parameters, result } = this;
-    return { id, hash, activity: activity.metadata, parameters, result };
+    const { id, hash, activityId, parameters, result } = this;
+    return { id, hash, activityId, parameters, result };
+  }
+
+  get activityId(): string {
+    return this.activity.id;
   }
 
   /**

@@ -2,10 +2,16 @@ import { Activity, type CreateActivityOptions } from './activity';
 import { generateId, createHash } from './utilities';
 import { Entity } from './entity';
 import { kebabCase } from 'change-case';
+import { database } from './database';
+import {
+  recordWorkflowChange,
+  recordWorkflowEvent,
+  type EventType,
+} from './record-workflow-event';
 
 type WorkflowName = string;
 type WorkflowId = `${string}/${string}`;
-type WorkflowStatus = 'pending' | 'running' | 'completed' | 'failed';
+export type WorkflowStatus = 'pending' | 'running' | 'completed' | 'failed';
 export type WorkflowMetadata<HasResult = false> = HasResult extends true
   ? Omit<WorkflowExecution['metadata'], 'result'> & {
       result: Exclude<WorkflowExecution['metadata']['result'], undefined>;
@@ -45,9 +51,10 @@ interface WorkflowExecutionOptions<
 export class WorkflowExecution<
   P extends Serializable[] = Serializable[],
   R extends Serializable = Serializable,
-> extends Entity<'name' | 'runId' | 'parameters' | 'result' | 'status'> {
+> extends Entity<
+  'name' | 'runId' | 'parameters' | 'result' | 'status' | 'eventCount'
+> {
   readonly hash: string;
-  protected status: WorkflowStatus = 'pending';
   result?: R;
 
   static create<P extends Serializable[], R extends Serializable>({
@@ -72,18 +79,13 @@ export class WorkflowExecution<
   ) {
     super();
 
-    this.hash = createHash(
-      name,
-      this.runId,
-      workflow.toString(),
-      ...parameters,
-    );
-
+    this.hash = createHash(name, this.runId, this.code, ...parameters);
     const data = this.load();
-
+    /**
+     * Restore the state of the workflow execution.
+     */
     if (data) {
       this.result = data.result;
-      this.status = data.status;
     }
   }
 
@@ -91,19 +93,41 @@ export class WorkflowExecution<
     return `${this.name}/${this.runId}`;
   }
 
-  get code() {
+  get code(): string {
     return this.workflow.toString();
   }
 
   get metadata() {
-    const { id, hash, name, runId, parameters, result, status } = this;
-    return { id, hash, name, runId, parameters, result, status };
+    const { id, hash, name, runId, parameters, result, status, eventCount } =
+      this;
+    return { id, hash, name, runId, parameters, result, status, eventCount };
   }
 
-  #updateStatus(status: WorkflowStatus) {
-    this.status = status;
-    this.save();
+  get status(): WorkflowStatus {
+    return this.get('status') || 'pending';
   }
+
+  get eventCount() {
+    return database.get(`${this.id}/meta/eventCount`) || 0;
+  }
+
+  get<K extends keyof WorkflowMetadata>(key: K): WorkflowMetadata[K] {
+    return database.get(`${this.id}`)[key];
+  }
+
+  private set<K extends keyof WorkflowMetadata>(
+    key: K,
+    value: WorkflowMetadata[K],
+  ) {
+    return recordWorkflowChange(this.id, key, value);
+  }
+
+  private recordEvent = <T extends EventType>(
+    type: T,
+    data: Record<string, unknown>,
+  ) => {
+    return recordWorkflowEvent(this.id, type, data);
+  };
 
   /**
    * Utility function to indentify the activities in the workflow.
@@ -122,17 +146,36 @@ export class WorkflowExecution<
   };
 
   async execute() {
-    this.#updateStatus('running');
+    if (this.result) {
+      await this.set('status', 'completed');
+      return this.result;
+    }
+
+    await this.set('status', 'running');
 
     try {
       this.result = await this.workflow(
         this.createActivity,
         ...this.parameters,
       );
-      this.#updateStatus('completed');
+
+      this.set('status', 'completed');
       return this.result;
     } catch (error) {
-      this.#updateStatus('failed');
+      this.set('status', 'failed');
+
+      if (error instanceof Error) {
+        this.recordEvent('workflow-error', {
+          hasMessage: true,
+          message: error.message,
+        });
+      } else {
+        this.recordEvent('workflow-error', {
+          hasMessage: false,
+          message: 'Unknown,',
+        });
+      }
+
       throw error;
     }
   }
