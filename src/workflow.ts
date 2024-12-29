@@ -55,8 +55,6 @@ export class WorkflowExecution<
 > extends Entity<
   'name' | 'runId' | 'parameters' | 'result' | 'status' | 'eventCount'
 > {
-  result?: R;
-
   static async create<P extends Serializable[], R extends Serializable>({
     name,
     workflow,
@@ -65,6 +63,9 @@ export class WorkflowExecution<
   }: WorkflowExecutionOptions<P, R>) {
     const id: WorkflowId = `${name}/${runId}`;
     const hash = createHash(name, runId, workflow.toString(), ...parameters);
+    const status = 'pending';
+    const eventCount = 0;
+
     name = kebabCase(name) as WorkflowName;
 
     await database.put(id, {
@@ -75,30 +76,48 @@ export class WorkflowExecution<
       hash,
     });
 
-    return new WorkflowExecution<P, R>(
+    return new WorkflowExecution({
       id,
       name,
       workflow,
       parameters,
       runId,
       hash,
-    );
+      status,
+      eventCount,
+      result: undefined,
+    });
   }
 
-  private constructor(
-    public readonly id: WorkflowId,
-    public readonly name: WorkflowExecutionOptions<P, R>['name'],
-    private readonly workflow: WorkflowExecutionOptions<P, R>['workflow'],
-    public readonly parameters: WorkflowExecutionOptions<P, R>['parameters'],
-    public readonly runId: string,
-    public readonly hash: string,
-  ) {
+  public readonly id: WorkflowId;
+  public readonly name: WorkflowExecutionOptions<P, R>['name'];
+  private readonly workflow: WorkflowExecutionOptions<P, R>['workflow'];
+  public readonly parameters: WorkflowExecutionOptions<P, R>['parameters'];
+  public readonly runId: string;
+  public readonly hash: string;
+  public result?: R;
+
+  private constructor({
+    id,
+    name,
+    runId,
+    parameters,
+    hash,
+    workflow,
+  }: WorkflowMetadata & {
+    workflow: WorkflowExecutionOptions<P, R>['workflow'];
+  }) {
     super();
 
-    this.save().then(() => {
-      const data = this.load();
-      if (data) this.result = data.result;
-    });
+    this.id = id;
+    this.name = name;
+    this.runId = runId;
+    this.parameters = parameters as P;
+    this.workflow = workflow;
+    this.hash = hash;
+
+    const data = this.load();
+    if (data) this.result = data.result;
   }
 
   get code(): string {
@@ -139,7 +158,7 @@ export class WorkflowExecution<
   };
 
   /**
-   * Utility function to indentify the activities in the workflow.
+   * Utility function to identify the activities in the workflow.
    * @param fn The function that represents the activity.
    * @param options The options to create the activity.
    */

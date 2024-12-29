@@ -11,6 +11,7 @@ const workflow = createWorkflow(
     const double = activity((x: number) => x * 2);
 
     let result = await sum(a, b);
+
     result = await sum(result, 3);
     result = await double(result);
 
